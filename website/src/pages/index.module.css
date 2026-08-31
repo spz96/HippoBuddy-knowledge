@@ -1,0 +1,1005 @@
+/* ── Hero · Swiss Style (IKB 克莱因蓝) · 非对称三段式 ── */
+.heroBanner {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  /* 铺满首屏: 视口高度 - Docusaurus 导航栏; 左右留白交给 heroContainer 的 5vw (对齐 PPT .slide padding) */
+  padding: 5.5vh 0 7vh 0;
+  isolation: isolate;
+  /* 铺满首屏: 视口高度 - Docusaurus 导航栏 */
+  min-height: calc(100vh - var(--ifm-navbar-height));
+  display: flex;
+  flex-direction: column;
+  /* 深底恒亮, light/dark 主题下 Hero 一致 · 与 ppt-demo 首页 --ink #0a0a0a 统一 */
+  background: #0a0a0a;
+  color: #ffffff;
+  font-family: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+/* 全宽容器 · 对齐 PPT 首页: 内容铺满视口, 左右 5vw 留白随屏幕同比例缩放 */
+.heroContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  padding: 0 5vw;
+}
+
+/* 底部淡出到页面底色, 与 Features 区自然衔接 */
+.heroBanner::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 96px;
+  background: linear-gradient(to bottom, transparent, rgba(10, 10, 10, 0.92));
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── ASCII 字符呼吸场 (canvas) ── */
+.asciiField {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* ── 三段式容器: 顶部 chrome / 中间 main / 底部 footer ── */
+.heroInner {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  flex: 1;
+  min-height: min(480px, 70vh);
+  display: flex;
+  flex-direction: column;
+  /* 入场动画改为各元素独立错峰 (见各元素 animation) */
+}
+
+/* 顶部 chrome · 两端对齐 (mono) · PPT: rgba(255,255,255,.62) */
+.heroChrome {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-family: var(--ifm-font-family-monospace), 'JetBrains Mono', monospace;
+  font-size: max(11px, .78rem);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .62);
+  animation: heroFadeUp .4s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* 主内容 · grid 三行 (对齐 PPT 封面): kicker 左 / 标题居中巨字 / lead 左 */
+.heroMain {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 2.6vh;
+  align-items: start;
+  min-height: 0;
+}
+
+/* 等宽标签行: 左侧短线 + 大字距 (PPT t-meta 风格) */
+.heroKicker {
+  font-family: var(--ifm-font-family-monospace), 'JetBrains Mono', monospace;
+  font-size: 14px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .78);
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2em;
+  animation: heroFadeUp .4s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: .08s;
+}
+.heroKicker::before {
+  content: '';
+  width: 30px;
+  height: 1px;
+  background: currentColor;
+  opacity: .5;
+}
+
+/* 细字重大标题 · 垂直居中于中间行 (完全对齐 PPT 封面: align-self:center / min(11.6vw,19vh) / -.025em) */
+.heroTitle {
+  position: relative; /* canvas 标题覆盖层的定位锚 */
+  align-self: center;
+  font-weight: 300;
+  font-size: min(11.6vw, 19vh);
+  line-height: .94;
+  letter-spacing: -.025em;
+  color: #ffffff;
+  margin: 0;
+  /* 标题入场: 微缩放 + 上浮, 冲击力最强的一拍 · 延迟制造悬念, 等 kicker 完全浮现后再出 */
+  animation: heroZoomIn .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: .4s;
+}
+
+/* ── 标题 canvas 覆盖层: 与背景 AsciiField 同构的点阵呼吸场 ──
+   absolute 铺满 h1 盒, 掩码只画字形内的格子, 其余透明;
+   z-index 高于文字层, pointer-events 穿透不挡交互 */
+.titleAsciiField {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  /* 与背景 AsciiField 同款 screen 混合: 亮色叠加更亮, 标题与背景同步发亮 */
+  mix-blend-mode: screen;
+  /* 三层霓虹辉光: 近层勾勒字形, 中层形成光晕, 远层铺开环境光 → 标题整体强烈发光 */
+  filter: drop-shadow(0 0 10px rgba(170, 215, 255, .7))
+          drop-shadow(0 0 26px rgba(170, 215, 255, .4))
+          drop-shadow(0 0 56px rgba(170, 215, 255, .18));
+}
+
+/* canvas 接管后隐藏 CSS 像素文字(保留占位, 尺寸不变, 避免 canvas 重算) */
+.titleCanvasOn .heroTitleSolid,
+.titleCanvasOn .heroTitleItalic {
+  opacity: 0;
+}
+/* ── 动态流动像素: 与背景 ASCII 呼吸场同语言 ──
+   三层结构模拟背景的 4 正弦波叠加:
+   ① 主元素 = 双层点阵 (密层亮 + 疏层暗, 颗粒感) · 小位移无缝循环
+   ② ::before = 大尺度径向光斑 · 绕字形缓慢移动 + 亮度起伏 (模拟 sin 波的明暗涌动)
+   ③ ::after  = 第二光斑 · 不同周期/方向, 与 ② 干涉出"波浪流过"的多频流动感 */
+.heroTitleSolid,
+.heroTitleItalic {
+  position: relative;
+  display: inline-block;
+  /* 关键修复: 父级 line-height .94 过紧, y 的下降部(descender)超出盒高,
+     background-clip:text 只裁剪盒内背景 → 尾巴无点阵而"不完整"。
+     上下补 padding 扩大背景平铺区, 负 margin 抵消布局占位, 位置与行高不变 */
+  padding: .12em 0 .25em 0;
+  margin: -.12em 0 -.25em 0;
+}
+/* 光斑层: 复制同文字, background-clip:text 裁到字形, 叠加在主点阵之上 */
+.heroTitleSolid::before,
+.heroTitleSolid::after,
+.heroTitleItalic::before,
+.heroTitleItalic::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  font: inherit;
+  letter-spacing: inherit;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* ── Hippo: 白色像素点阵 + 白色光斑涌动 ── */
+.heroTitleSolid {
+  color: transparent;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .95) 1px, transparent 1.6px),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .32) 1px, transparent 2.4px);
+  background-size: 5px 5px, 11px 11px;
+  background-position: 0 0, 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: pixelsFlow 14s linear infinite;
+}
+.heroTitleSolid::before {
+  background-image: radial-gradient(ellipse at 35% 45%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 62%);
+  background-size: 230% 230%;
+  animation: lumenDriftA 16s ease-in-out infinite;
+}
+.heroTitleSolid::after {
+  background-image: radial-gradient(ellipse at 70% 60%, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0) 55%);
+  background-size: 180% 180%;
+  animation: lumenDriftB 22s ease-in-out infinite;
+}
+
+/* ── Buddy: 克莱因蓝像素点阵 + 斜体 + 蓝色光斑涌动 · 反向漂移形成呼应 ── */
+.heroTitleItalic {
+  font-style: italic;
+  font-weight: 500;
+  color: transparent;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(139, 233, 255, .95) 1px, transparent 1.6px),
+    radial-gradient(circle at 50% 50%, rgba(91, 123, 255, .40) 1px, transparent 2.4px);
+  background-size: 5px 5px, 11px 11px;
+  background-position: 0 0, 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  /* y 斜体尾巴向右下甩出盒宽: 右侧补 padding 扩大背景平铺区, 负 margin 抵消布局;
+     不加左侧 padding 以免文字被顶右移破坏与 Hippo 的衔接 */
+  padding-right: .2em;
+  margin-right: -.2em;
+  animation: pixelsFlow 16s linear infinite reverse;
+}
+.heroTitleItalic::before {
+  background-image: radial-gradient(ellipse at 30% 40%, rgba(139, 233, 255, .95), rgba(139, 233, 255, 0) 60%);
+  background-size: 220% 220%;
+  animation: lumenDriftA 18s ease-in-out infinite;
+}
+.heroTitleItalic::after {
+  background-image: radial-gradient(ellipse at 75% 65%, rgba(91, 123, 255, .85), rgba(91, 123, 255, 0) 52%);
+  background-size: 190% 190%;
+  animation: lumenDriftB 26s ease-in-out infinite;
+}
+
+/* 引语 lead · 左对齐 (PPT: 1.55vw · 52ch · 400) */
+.heroSubtitle {
+  justify-self: start;
+  font-size: clamp(1.1rem, 1.55vw, 1.7rem);
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -.005em;
+  color: rgba(255, 255, 255, .86);
+  max-width: 52ch;
+  margin: 0;
+  text-align: left;
+  animation: heroFadeUp .4s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: .55s;
+}
+
+/* slogan 英文段: 与 hero chrome/kicker 的 mono 标签语言统一 */
+.heroSloganEn {
+  font-family: var(--ifm-font-family-monospace), 'JetBrains Mono', monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+/* slogan 中文段: 衬线宋体, 与 mono 英文形成「科技 × 人文」混搭 */
+.heroSloganZh {
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+
+/* ── 底部 · 发丝线 + 两端信息 ── */
+.heroFooter {
+  flex: 0 0 auto;
+  animation: heroFadeUp .4s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: .7s;
+}
+
+.heroRule {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, .24);
+  margin-bottom: 2.2rem;
+}
+
+/* 底部行: 左按钮组 / 右下载链接 */
+.heroFooterRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  flex-wrap: wrap;
+}
+
+/* 直角按钮 · 克制的瑞士风 */
+.heroBtn {
+  border-radius: 0;
+  font-weight: 500;
+  letter-spacing: .02em;
+  padding: .8em 2em;
+  border: 1px solid transparent;
+  transition: background .25s ease, color .25s ease, transform .25s ease, box-shadow .25s ease;
+}
+.heroBtnPrimary {
+  background: #002FA7;
+  color: #ffffff;
+}
+.heroBtnPrimary:hover {
+  background: #0a3fc9;
+  color: #ffffff;
+  box-shadow: 0 6px 24px rgba(0, 47, 167, .35);
+  transform: translateY(-2px);
+}
+.heroBtnGhost {
+  background: rgba(255, 255, 255, .05);
+  border-color: rgba(255, 255, 255, .28);
+  color: #ffffff;
+}
+.heroBtnGhost:hover {
+  background: rgba(255, 255, 255, .12);
+  border-color: rgba(255, 255, 255, .5);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* 下载链接 · 右对齐 */
+.downloadLinks {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  opacity: .85;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .35em;
+  flex-wrap: wrap;
+}
+
+.downloadLabel {
+  position: relative;
+  top: -3px;
+  white-space: nowrap;
+}
+
+.downloadLinks a {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.downloadLinks a:hover {
+  color: #5B7BFF;
+}
+
+.osIcon {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sep {
+  margin: 0 .5rem;
+  opacity: .5;
+}
+
+/* 底部 meta · 两端: 左技术栈 / 右 Open Source */
+.heroMeta {
+  margin-top: 2.4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  font-family: var(--ifm-font-family-monospace), 'JetBrains Mono', monospace;
+  font-size: max(11px, .78rem);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* ── Screenshot section ── */
+.screenshotSection {
+  padding: 3rem 0 5rem;
+  background: #fafaf8; /* 纸白 · 与视频区 #f5f5f7 交替 */
+}
+
+[data-theme='dark'] .screenshotSection {
+  background: #0a0a0a;
+}
+
+/* 全宽容器 · 对齐 Hero (5vw 留白) */
+.screenshotSection :global(.container) {
+  max-width: none;
+  padding: 0 5vw;
+}
+
+/* ── 区块头部 · 对齐 chrome 刊头 + kicker + 大标题 (与 Features/Metrics 同语言) ── */
+.shotHead {
+  margin-bottom: 3rem;
+}
+
+.shotChrome {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 2.6rem;
+}
+
+[data-theme='dark'] .shotChrome {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.shotKicker {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 0.7rem;
+}
+
+[data-theme='dark'] .shotKicker {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.shotTitle {
+  font-weight: 200;
+  font-size: clamp(2rem, 4.2vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 0;
+  color: #1a1a1a;
+}
+
+[data-theme='dark'] .shotTitle {
+  color: #ffffff;
+}
+
+/* ── 截图网格 · 1 大 + 2 小 (对齐瑞士网格语言) ── */
+.screenshotGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3rem 2rem;
+  max-width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+/* 首张大图跨满两列 */
+.screenshotGrid > :first-child {
+  grid-column: 1 / -1;
+}
+
+/* 错峰: 第 2、3 张依次延后 */
+.screenshotGrid > :nth-child(2) {
+  transition-delay: 0.15s;
+}
+
+.screenshotGrid > :nth-child(3) {
+  transition-delay: 0.3s;
+}
+
+/* 移动端: 回到单列 */
+@media (max-width: 996px) {
+  .screenshotGrid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+}
+
+.screenshotCard {
+  margin: 0;
+  text-align: center;
+  /* button 重置: 无边框无背景, 继承文本 */
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+  display: block;
+  width: 100%;
+  transition: transform .35s ease, box-shadow .35s ease;
+}
+
+.screenshotCard:hover {
+  transform: translateY(-4px);
+}
+
+.screenshotCard img {
+  width: 100%;
+  display: block;
+  border-radius: 0;                      /* 直角 · 对齐瑞士语言 */
+  border: 1px solid rgba(0, 0, 0, 0.14); /* 发丝边框 */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+}
+
+[data-theme='dark'] .screenshotCard img {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.screenshotCard:hover img {
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+}
+
+/* ── 截图 caption · mono 编号 + 描述 ── */
+.shotCaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme='dark'] .shotCaption {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.shotNo {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .shotNo {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ── Video section · 内嵌 B 站播放器 ── */
+.videoSection {
+  padding: 3rem 0 5rem;
+  background: #f5f5f7; /* 浅灰 · 与 Metrics 纸白交替 */
+}
+
+[data-theme='dark'] .videoSection {
+  background: #0a0a0a;
+}
+
+/* 全宽容器 · 对齐 Hero (5vw 留白) */
+.videoSection :global(.container) {
+  max-width: none;
+  padding: 0 5vw;
+}
+
+/* ── 区块头部 · 与截图区同语言 (chrome 刊头 + kicker + 大标题) ── */
+.videoHead {
+  margin-bottom: 3rem;
+}
+
+.videoChrome {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 2.6rem;
+}
+
+[data-theme='dark'] .videoChrome {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.videoKicker {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 0.7rem;
+}
+
+[data-theme='dark'] .videoKicker {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.videoTitle {
+  font-weight: 200;
+  font-size: clamp(2rem, 4.2vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 0;
+  color: #1a1a1a;
+}
+
+[data-theme='dark'] .videoTitle {
+  color: #ffffff;
+}
+
+/* ── 播放器容器 · 16:9 自适应 · 居中限宽 ── */
+.videoFrame {
+  position: relative;
+  width: 100%;
+  max-width: min(960px, 100%);
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  background: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.14); /* 发丝边框 */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+}
+
+[data-theme='dark'] .videoFrame {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.videoFrame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* ── 底部外链提示 · 居中 ── */
+.videoHint {
+  margin: 1.2rem 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+[data-theme='dark'] .videoHint {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.videoHint a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.videoHint a:hover {
+  color: var(--ifm-color-primary);
+}
+
+/* ── Lightbox 截图放大 · 近黑遮罩 (与 Hero --ink 同色系) ── */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(6px);
+  padding: 5vh 5vw;
+  animation: lightboxFadeIn .25s ease-out;
+}
+
+.lightboxInner {
+  margin: 0;
+  max-width: min(1400px, 90vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lightboxInner img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 0; /* 直角 · 对齐瑞士语言 */
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* lightbox 内 caption 反白 */
+.lightbox .shotCaption {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.lightbox .shotNo {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.lightboxClose {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.lightboxClose:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.lightboxHint {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+@keyframes lightboxFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox {
+    animation: none;
+  }
+}
+
+/* ── Scroll reveal ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .6s ease-out, transform .6s ease-out;
+}
+
+.revealVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Keyframes: 逐层错峰入场 (对齐 PPT 封面的分步动画) ── */
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(.96) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── 像素漂移: 双层点阵对角流动, 位移取各自 size 的整数倍实现无缝循环 ── */
+@keyframes pixelsFlow {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 20px 20px, 33px 11px; }
+}
+
+/* ── 光斑涌动: 大尺寸径向光斑绕字形走一圈 + 亮度起伏 (首尾同态, 无缝循环) ── */
+@keyframes lumenDriftA {
+  0%   { background-position: 0% 0%;   opacity: .18; }
+  25%  { background-position: 100% 0%; opacity: .5; }
+  50%  { background-position: 100% 100%; opacity: .28; }
+  75%  { background-position: 0% 100%;  opacity: .52; }
+  100% { background-position: 0% 0%;   opacity: .18; }
+}
+@keyframes lumenDriftB {
+  0%   { background-position: 100% 100%; opacity: .3; }
+  25%  { background-position: 0% 100%;  opacity: .14; }
+  50%  { background-position: 0% 0%;    opacity: .5; }
+  75%  { background-position: 100% 0%;  opacity: .22; }
+  100% { background-position: 100% 100%; opacity: .3; }
+}
+
+/* ── Responsive ── */
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2.8rem 0 2.4rem;
+  }
+
+  .heroInner {
+    min-height: min(440px, 72vh);
+  }
+
+  /* 顶部 chrome 右侧页码隐藏 */
+  .heroChrome > span:last-child {
+    display: none;
+  }
+
+  .heroKicker {
+    letter-spacing: .2em;
+  }
+
+  /* 移动端标题: 与桌面同构的视口驱动等比缩放(min(vw,vh)),
+     系数加大(16vw vs 桌面 11.6vw) → 手机上标题占更大视口比例;
+     纯 vw/vh 无 clamp 平台期, 任何屏幕宽度都严格跟随视口缩放 */
+  .heroTitle {
+    font-size: min(16vw, 14vh);
+  }
+
+  .heroSubtitle {
+    font-size: 1.05rem;
+    max-width: 100%;
+  }
+
+  .heroFooterRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.6rem;
+  }
+
+  .heroActions {
+    width: 100%;
+  }
+
+  .heroBtn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .downloadLinks {
+    justify-content: flex-start;
+  }
+
+  .heroMeta {
+    letter-spacing: .14em;
+  }
+}
+
+/* ── Reduced motion: ASCII 呼吸场由组件内直接跳过, 这里处理 CSS 入场 ── */
+@media (prefers-reduced-motion: reduce) {
+  .heroChrome,
+  .heroKicker,
+  .heroTitle,
+  .heroTitleSolid,
+  .heroTitleItalic,
+  .heroSubtitle,
+  .heroFooter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* 像素点阵兜底: 减弱动效时去掉点阵与光斑层, 显示纯色实心可读字 */
+  .heroTitleSolid,
+  .heroTitleItalic {
+    background-image: none !important;
+    animation: none !important;
+  }
+  .heroTitleSolid {
+    color: #ffffff !important;
+  }
+  .heroTitleItalic {
+    color: var(--ifm-color-primary-bright, #5b7bff) !important;
+  }
+  .heroTitleSolid::before,
+  .heroTitleSolid::after,
+  .heroTitleItalic::before,
+  .heroTitleItalic::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .reveal {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── Community Modal · 交流群悬浮卡片 ── */
+.communityModal {
+  position: fixed;
+  inset: 0;
+  z-index: 310;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 10, 0.75);
+  backdrop-filter: blur(4px);
+  animation: lightboxFadeIn .2s ease-out;
+}
+
+.communityModalInner {
+  position: relative;
+  max-width: 380px;
+  width: 90%;
+  padding: 2rem 2.4rem;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+[data-theme='dark'] .communityModalInner {
+  background: #1a1a1a;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.communityModalHead {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 0.6rem;
+}
+
+[data-theme='dark'] .communityModalHead {
+  color: #ffffff;
+}
+
+.communityModalDesc {
+  font-size: 0.88rem;
+  color: rgba(0, 0, 0, 0.55);
+  margin-bottom: 1.2rem;
+}
+
+[data-theme='dark'] .communityModalDesc {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.communityModalNo {
+  font-family: var(--ifm-font-family-monospace), 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+  margin-bottom: 1.2rem;
+}
+
+[data-theme='dark'] .communityModalNo {
+  color: #ffffff;
+}
+
+.communityModalCopy {
+  display: inline-block;
+  padding: 0.6rem 1.6rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #ffffff;
+  background: var(--ifm-color-primary);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.communityModalCopy:hover {
+  background: var(--ifm-color-primary-dark);
+}
+
+.communityModalClose {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: rgba(0, 0, 0, 0.4);
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.communityModalClose:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='dark'] .communityModalClose {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme='dark'] .communityModalClose:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

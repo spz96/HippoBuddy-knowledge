@@ -1,0 +1,88 @@
+{
+  "name": "HippoBuddy",
+  "version": "1.1.0",
+  "description": "HippoBuddy",
+  "main": "main.js",
+  "private": true,
+  "author": "HippoBuddy",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "start:cockpit": "electron . --cockpit",
+    "dev": "electron . --dev",
+    "dev:cockpit": "electron . --dev --cockpit",
+    "build:jar": "cd .. && mvn package -DskipTests",
+    "pack": "electron-builder --win --x64",
+    "pack:all": "electron-builder"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.example.hippobuddy",
+    "productName": "HippoBuddy",
+    "icon": "assets/icon2.png",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "package.json",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": ".",
+        "filter": ["**/*"]
+      }
+    ],
+    "electronLanguages": ["zh-CN", "en-US"],
+    "publish": {
+      "provider": "github",
+      "owner": "Puteitous",
+      "repo": "HippoBuddy"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "hardenedRuntime": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "${productName}-${version}.${ext}"
+    }
+  }
+}

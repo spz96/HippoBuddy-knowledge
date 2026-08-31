@@ -1,0 +1,106 @@
+llm:
+  # provider 可选值：
+  #   deepseek             — DeepSeek Chat Completions（OpenAI 兼容，功能全：视觉/全模型）
+  #   deepseek-responses   — DeepSeek Responses API（仅 deepseek-v4-flash；服务端联网搜索 + Codex 兼容；无视觉、无状态）
+  #   dashscope / openai / anthropic / ollama / zhipu / moonshot / minimax
+  #   stepfun / lingyi / doubao / siliconflow / xunfei / azure / custom
+  provider: deepseek
+  api_key: ${DEEPSEEK_API_KEY:-your-api-key-here}
+  model: deepseek-v4-flash
+  base_url: https://api.deepseek.com
+  # 注意：provider 为 deepseek-responses 时，base_url 默认 https://api.deepseek.com（不带 /v1），
+  #       且仅支持 deepseek-v4-flash 模型（deepseek-v4-pro 预计 2026-08 初支持）
+  max_tokens: 0                     # 单次 LLM 调用输出上限（0=不限制，使用模型默认值）
+                                    # 限制范围：reasoning_content（思维链）+ content（回答）
+                                    # 不涉及：工具定义（tools 参数）、工具执行结果（属于后续请求的输入）
+                                    # 注意：tool_calls 指令本身会占用输出 token 额度，但占比很小
+  temperature: 0.7
+  timeout: 60000
+  # 思考模式（适用于 DeepSeek R1 等推理模型）
+  thinking_enabled: true            # 是否启用思考模式（仅对支持思考模式的模型有效）
+  reasoning_effort: high            # 思考强度：low / high（默认）/ max
+  response_format:                  # 响应格式（可选）：text / json_object
+  vision_supported: auto            # 视觉能力：auto（自动判断）/ true（强制开启）/ false（强制关闭）
+                                    # auto 模式下，内置模型列表 + vision-models.yaml 共同生效
+                                    # 如需新增支持视觉的模型，请编辑 vision-models.yaml（与 config.yaml 同级）
+                                    # 无需改代码，重启或调用 VisionModelRegistry.reload() 即可生效
+  # 模型历史快照（自动维护，保存切换过的模型配置，用于快速切换）
+  model_history: []
+
+tools:
+  # 权限范围：strict=仅操作当前工作区；relaxed=可操作全目录。默认 strict。
+  # 确认卡片由 bash / delete_file 各自的 require_confirmation 独立控制，与范围无关。
+  # 但严格禁止的危险命令（rm -rf /、format、diskpart 等）任何范围下仍会被拦截。
+  mode: strict
+  bash:
+    enabled: true
+    # ⚠️ 关闭后"需确认"级别的命令将直接执行（不弹确认框）。
+    # 严格禁止的命令（format/shutdown/diskpart/rm -rf / 等）不受此开关影响，仍会被拦截。
+    # 默认 true（推荐保持开启）；生产环境请勿设为 false。
+    require_confirmation: true
+  web_search:
+    enabled: false                # 启用/禁用联网搜索
+    provider: brave               # brave | tavily
+    api_key: "your-api-key"
+    # Brave Search 免费注册: https://brave.com/search/api/（月 2,000 次）
+    # Tavily 免费注册: https://tavily.com/（月 1,000 basic + 100 advanced）
+    # 💡 提示：provider 为 deepseek-responses 时，web_search 自动切换为 DeepSeek
+    #   服务端内置搜索（{"type":"web_search"}，无需 api_key，服务端执行）；其他
+    #   provider 仍使用上方 brave/tavily 客户端搜索。
+  subagent:
+    # Sub-Agent 并行任务（默认关闭）
+    # 启用后注册 fork_agent / fork_agents / list_subagents / cancel_subagent 工具
+    enabled: false
+
+session:
+  max_saved_sessions: 1000             # 最大保存会话数（0 = 禁用持久化）
+  enable_max_saved_cleanup: true       # 是否启用历史清理（false = 永久保留全部历史，磁盘自负）
+
+ui:
+  theme: dark
+  prompt: "agent>"
+  syntax_highlight: true
+  show_token_usage: true
+  show_timestamp: false
+  color_output: true
+
+web:
+  port: 9090
+
+context:
+  max_tokens: 1000000
+  per_tool_safe_limit: 20000        # 单工具结果截断上限（read工具不限制）
+  global_hard_limit: 32000          # 全局硬截断上限
+
+rule:
+  # 规则文件从 .hippo/rules/*.md 加载
+  max_tokens: 8000                    # Rule 最大 token 数
+  inject_at_startup: true             # 启动时注入
+
+memory:
+  # 长期记忆提取配置
+  # 系统会定期从对话中提取重要信息作为长期记忆保存
+  extraction_enabled: false           # 启用长期记忆提取（默认关闭）
+  extraction_interval: 5              # 每 N 轮对话触发一次提取
+  session_extraction_enabled: true    # 启用会话内记忆提取（默认开启）
+
+mcp:
+  # MCP（Model Context Protocol）服务配置
+  enabled: true                       # 全局启用 MCP
+  auto_connect: true                  # 启动时自动连接
+  auto_reconnect: true                # 断开时自动重连
+  max_reconnect_attempts: 5           # 最大重连次数
+  reconnect_delay_seconds: 5          # 重连间隔（秒）
+  request_timeout: 60000              # 请求超时（毫秒）
+  servers: []                         # MCP 服务列表（在 config.yaml 中配置）
+  # servers:
+  #   - id: my-server
+  #     name: My MCP Server
+  #     type: stdio                    # stdio | sse
+  #     command: npx
+  #     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+  #     env:
+  #       MY_VAR: value
+
+workspace:
+  default_workspace_path: ""          # 默认工作区路径（桌面端通过 UI 设置）

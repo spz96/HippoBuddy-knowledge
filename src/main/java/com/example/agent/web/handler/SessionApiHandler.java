@@ -1,0 +1,449 @@
+package com.example.agent.web.handler;
+
+import com.example.agent.application.ConversationService;
+import com.example.agent.config.Config;
+import com.example.agent.context.ManualCompactor;
+import com.example.agent.core.di.ServiceLocator;
+import com.example.agent.domain.conversation.Conversation;
+import com.example.agent.llm.client.LlmClient;
+import com.example.agent.service.TokenEstimatorFactory;
+import com.example.agent.service.TitleGenerationService;
+import com.example.agent.tools.FileChangeTracker;
+import com.example.agent.web.util.ConversationJsonlReader;
+import com.example.agent.web.util.SessionListBuilder;
+import com.example.agent.web.util.TokenStatsResponseBuilder;
+import com.example.agent.web.session.WebSessionManager;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+
+public class SessionApiHandler implements HttpHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(SessionApiHandler.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ConversationJsonlReader jsonlReader = new ConversationJsonlReader(objectMapper);
+    private static final SessionListBuilder sessionListBuilder = new SessionListBuilder(jsonlReader);
+    private static final TokenStatsResponseBuilder tokenStatsResponseBuilder = new TokenStatsResponseBuilder();
+    private static final SessionRewindHandler rewindHandler = new SessionRewindHandler();
+
+    @Override
+    public void handle(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, DELETE, POST, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+
+        if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            exchange.close();
+            return;
+        }
+
+        String path = exchange.getRequestURI().getPath();
+        String method = exchange.getRequestMethod();
+
+        try {
+            // 初始化内存缓存（从日志文件恢复 Token 统计）
+            com.example.agent.web.server.WebInitializer.initializeTokenCache(
+                com.example.agent.web.session.WebSessionManager.getInstance());
+
+            if ("GET".equals(method) && path.equals("/api/sessions")) {
+                handleListSessions(exchange);
+            } else if ("GET".equals(method) && path.matches("/api/sessions/[^/]+/messages$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/messages"));
+                handleGetMessages(exchange, sessionId);
+            } else if ("GET".equals(method) && path.matches("/api/sessions/[^/]+/tokens$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/tokens"));
+                handleGetTokens(exchange, sessionId);
+            } else if ("POST".equals(method) && path.matches("/api/sessions/[^/]+/compact$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/compact"));
+                handleCompactSession(exchange, sessionId);
+            } else if ("POST".equals(method) && path.matches("/api/sessions/[^/]+/rewind-check$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/rewind-check"));
+                rewindHandler.handleRewindCheck(exchange, sessionId);
+            } else if ("POST".equals(method) && path.matches("/api/sessions/[^/]+/rewind$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/rewind"));
+                rewindHandler.handleRewindSession(exchange, sessionId);
+            } else if ("POST".equals(method) && path.matches("/api/sessions/[^/]+/fork$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/fork"));
+                rewindHandler.handleForkSession(exchange, sessionId);
+            } else if ("DELETE".equals(method) && path.matches("/api/sessions/[^/]+$")) {
+                String sessionId = path.substring("/api/sessions/".length());
+                handleDeleteSession(exchange, sessionId);
+            } else if ("POST".equals(method) && path.matches("/api/sessions/[^/]+/rename$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/rename"));
+                handleRenameSession(exchange, sessionId);
+            } else if ("POST".equals(method) && path.matches("/api/sessions/[^/]+/pin$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/pin"));
+                handlePinSession(exchange, sessionId);
+            } else if ("POST".equals(method) && path.matches("/api/sessions/[^/]+/title$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/title"));
+                handleGenerateTitle(exchange, sessionId);
+            } else if ("GET".equals(method) && path.matches("/api/sessions/[^/]+/status$")) {
+                String sessionId = path.substring("/api/sessions/".length(), path.lastIndexOf("/status"));
+                handleSessionStatus(exchange, sessionId);
+            } else {
+                sendError(exchange, 404, "Not found");
+            }
+        } catch (Exception e) {
+            logger.error("Session API 错误: {}", e.getMessage());
+            sendError(exchange, 500, e.getMessage());
+        }
+    }
+
+    private void handleListSessions(HttpExchange exchange) throws IOException {
+        Map<String, Conversation> activeSessions = com.example.agent.web.session.WebSessionManager.getInstance().getSessions();
+        List<Map<String, Object>> sessionList = sessionListBuilder.buildSessionList(activeSessions);
+
+        String response = objectMapper.writeValueAsString(sessionList);
+        byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(200, bytes.length);
+        exchange.getResponseBody().write(bytes);
+        exchange.close();
+    }
+
+    private void handleGetMessages(HttpExchange exchange, String sessionId) throws IOException {
+        // 切换到该会话时，同时加载其文件变更记录
+        FileChangeTracker.clearSessionChanges();
+        FileChangeTracker.loadSessionChanges(sessionId);
+
+        // 始终从 JSONL 文件读取，不依赖内存中被 detectAndFixInterruption 修改过的 Message 对象。
+        // 内存中的 Conversation 在 resumeConversation() 时可能被 detectAndFixInterruption() 修改
+        // （如清空最后一条 assistant 的 toolCalls、追加 [会话中断] 标记），
+        // 导致 F5 刷新后前端渲染异常（tool timeline 全部显示 cancelled、LLM 文本内容丢失）。
+        Path jsonl = jsonlReader.findJsonlFile(sessionId);
+        if (jsonl != null) {
+            List<Map<String, Object>> messages = jsonlReader.readMessages(jsonl);
+            sendJson(exchange, messages);
+            return;
+        }
+
+        sendJson(exchange, List.of());
+    }
+
+    private void handleDeleteSession(HttpExchange exchange, String sessionId) throws IOException {
+        Map<String, Conversation> sessions = com.example.agent.web.session.WebSessionManager.getInstance().getSessions();
+        Conversation conversation = sessions.remove(sessionId);
+        jsonlReader.removeFromCache(sessionId);
+
+        // 清理 FileChangeTracker 内存缓存
+        FileChangeTracker.removeSessionChanges(sessionId);
+
+        // 调用 ConversationService.destroy 清理组件（参照 CLI 实现）
+        if (conversation != null) {
+            ConversationService conversationService = com.example.agent.core.di.ServiceLocator.getOrNull(ConversationService.class);
+            if (conversationService != null) {
+                conversationService.destroy(conversation);
+                logger.info("已清理会话组件：sessionId={}", sessionId);
+            }
+        }
+
+        boolean deleted = false;
+
+        Path jsonl = jsonlReader.findJsonlFile(sessionId);
+        if (jsonl != null && Files.exists(jsonl)) {
+            try {
+                Path sessionDir = jsonl.getParent();
+                if (Files.exists(sessionDir)) {
+                    try (Stream<Path> walk = Files.walk(sessionDir)) {
+                        walk.sorted((a, b) -> b.compareTo(a))
+                            .forEach(path -> {
+                                try {
+                                    Files.delete(path);
+                                } catch (IOException e) {
+                                    logger.warn("删除会话文件失败: {}", path);
+                                }
+                            });
+                    }
+                    deleted = true;
+                    logger.info("已删除会话目录: sessionId={}, dir={}", sessionId, sessionDir);
+                }
+            } catch (IOException e) {
+                logger.warn("删除会话目录失败：sessionId={}", sessionId, e);
+            }
+        }
+
+        if (conversation != null) {
+            deleted = true;
+            logger.info("从内存中删除会话：sessionId={}", sessionId);
+        }
+
+        if (deleted) {
+            String response = "{\"success\":true,\"message\":\"Session deleted\"}";
+            byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+        } else {
+            sendError(exchange, 404, "Session not found");
+        }
+        exchange.close();
+    }
+
+    private void handleRenameSession(HttpExchange exchange, String sessionId) throws IOException {
+        String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        JsonNode json = objectMapper.readTree(requestBody);
+        String newName = json.has("name") ? json.get("name").asText() : "";
+
+        if (newName.isBlank()) {
+            sendError(exchange, 400, "Name cannot be empty");
+            exchange.close();
+            return;
+        }
+
+        Path jsonl = jsonlReader.findJsonlFile(sessionId);
+        if (jsonl != null && Files.exists(jsonl)) {
+            try {
+                List<String> lines = Files.readAllLines(jsonl);
+
+                String timestamp = java.time.Instant.now().toString();
+                String uuid = java.util.UUID.randomUUID().toString();
+
+                com.fasterxml.jackson.databind.node.ObjectNode titleEntry = objectMapper.createObjectNode();
+                titleEntry.put("type", "custom-title");
+                titleEntry.put("uuid", uuid);
+                titleEntry.put("sessionId", sessionId);
+                titleEntry.put("timestamp", timestamp);
+                titleEntry.put("version", "1.0.0");
+                titleEntry.put("cwd", System.getProperty("user.dir"));
+                titleEntry.put("title", newName);
+
+                lines.add(0, objectMapper.writeValueAsString(titleEntry));
+
+                Files.write(jsonl, lines, StandardCharsets.UTF_8);
+
+                logger.info("重命名会话：sessionId={}, newName={}", sessionId, newName);
+
+                String response = "{\"success\":true,\"message\":\"Session renamed\"}";
+                byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, bytes.length);
+                exchange.getResponseBody().write(bytes);
+            } catch (IOException e) {
+                logger.error("重命名会话失败：sessionId={}", sessionId, e);
+                sendError(exchange, 500, "Failed to rename session: " + e.getMessage());
+            }
+        } else {
+            sendError(exchange, 404, "Session not found");
+        }
+        exchange.close();
+    }
+
+    /**
+     * 设置会话置顶状态。
+     * POST /api/sessions/{id}/pin
+     * 请求体: {"pinned": true|false}
+     */
+    private void handlePinSession(HttpExchange exchange, String sessionId) throws IOException {
+        String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        boolean pinned = false;
+        try {
+            JsonNode json = objectMapper.readTree(requestBody);
+            if (json.has("pinned") && json.get("pinned").isBoolean()) {
+                pinned = json.get("pinned").asBoolean();
+            }
+        } catch (IOException e) {
+            sendError(exchange, 400, "Invalid request body");
+            exchange.close();
+            return;
+        }
+
+        // 校验会话存在（内存或磁盘任一存在即可）
+        Path jsonl = jsonlReader.findJsonlFile(sessionId);
+        boolean exists = WebSessionManager.getInstance().getSessions().containsKey(sessionId)
+            || (jsonl != null && Files.exists(jsonl));
+        if (!exists) {
+            sendError(exchange, 404, "Session not found");
+            exchange.close();
+            return;
+        }
+
+        WebSessionManager.getInstance().persistPinToDisk(sessionId, pinned);
+        logger.info("设置置顶状态：sessionId={}, pinned={}", sessionId, pinned);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("pinned", pinned);
+        sendJson(exchange, response);
+    }
+
+    /**
+     * 根据第一条用户消息，用 LLM 自动生成会话标题。
+     * POST /api/sessions/{id}/title
+     * 如果已存在 custom-title 则跳过（不覆盖用户手动重命名）。
+     * 请求体可选字段：userMessage（前端消息原文，作为首选消息来源）。
+     */
+    private void handleGenerateTitle(HttpExchange exchange, String sessionId) throws IOException {
+        // 读取请求体中前端传递的 userMessage（首选消息来源）
+        String frontendMessage = null;
+        try {
+            String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            if (!requestBody.isBlank()) {
+                JsonNode json = objectMapper.readTree(requestBody);
+                if (json.has("userMessage") && !json.get("userMessage").asText().isBlank()) {
+                    frontendMessage = json.get("userMessage").asText();
+                }
+            }
+        } catch (Exception ignored) {
+            // 无请求体或解析失败时忽略
+        }
+
+        TitleGenerationService service = new TitleGenerationService();
+        String title = service.generateTitle(sessionId, frontendMessage);
+
+        if (title == null) {
+            sendError(exchange, 400, "No user message found");
+            return;
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("title", title);
+        sendJson(exchange, response);
+    }
+
+    /**
+     * 手动压缩会话上下文（参照 CLI 的 /compact 命令）
+     * POST /api/sessions/{id}/compact
+     * 请求体: {"instruction": "可选的自定义压缩指令"}
+     */
+    private void handleCompactSession(HttpExchange exchange, String sessionId) throws IOException {
+        Conversation conversation = com.example.agent.web.session.WebSessionManager.getInstance().getSessions().get(sessionId);
+        if (conversation == null) {
+            sendError(exchange, 404, "Session not found");
+            exchange.close();
+            return;
+        }
+
+        String userInstruction = null;
+        try {
+            String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            if (!requestBody.isBlank()) {
+                JsonNode json = objectMapper.readTree(requestBody);
+                if (json.has("instruction")) {
+                    userInstruction = json.get("instruction").asText();
+                }
+            }
+        } catch (Exception e) {
+            logger.debug("解析压缩请求体失败", e);
+        }
+
+        try {
+            ConversationService conversationService = ServiceLocator.get(ConversationService.class);
+            LlmClient llmClient = ServiceLocator.get(LlmClient.class);
+            int maxTokens = Config.getInstance().getContext().getMaxTokens();
+
+            ManualCompactor compactor = new ManualCompactor(
+                TokenEstimatorFactory.getDefault(),
+                llmClient
+            );
+
+            var originalMessages = conversation.getMessages();
+            int originalCount = originalMessages.size();
+            int originalTokens = TokenEstimatorFactory.getDefault().estimateConversationTokens(originalMessages);
+
+            var result = compactor.compact(originalMessages, userInstruction, maxTokens);
+
+            conversation.replaceMessages(result.getMessages());
+
+            int compactedCount = result.getMessages().size();
+            int savedTokens = result.getSavedTokens();
+            double savedPercent = savedTokens * 100.0 / Math.max(1, originalTokens);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("method", result.getMethod().getDisplayName());
+            response.put("originalCount", originalCount);
+            response.put("compactedCount", compactedCount);
+            response.put("reducedCount", originalCount - compactedCount);
+            response.put("savedTokens", savedTokens);
+            response.put("savedPercent", Math.round(savedPercent * 10.0) / 10.0);
+            response.put("summary", result.getSummary());
+
+            logger.info("手动压缩完成：sessionId={}, 原{}条/{}tokens → 压缩后{}条, 节省{}tokens({}%)",
+                sessionId, originalCount, originalTokens, compactedCount, savedTokens, savedPercent);
+
+            sendJson(exchange, response);
+        } catch (Exception e) {
+            logger.error("压缩会话失败：sessionId={}", sessionId, e);
+            sendError(exchange, 500, "Failed to compact session: " + e.getMessage());
+        }
+        exchange.close();
+    }
+
+    /**
+     * 获取会话 Token 统计信息（参照 CLI 的 tokens 命令）
+     * GET /api/sessions/{id}/tokens
+     */
+    private void handleGetTokens(HttpExchange exchange, String sessionId) throws IOException {
+        Conversation conversation = com.example.agent.web.session.WebSessionManager.getInstance().getSessions().get(sessionId);
+
+        // 会话未加载时（如重启后首次访问），尝试从 JSONL 恢复
+        // 只有磁盘上确有 JSONL 文件时才加载，避免为不存在的新会话创建空目录
+        if (conversation == null) {
+            Path jsonl = jsonlReader.findJsonlFile(sessionId);
+            if (jsonl != null) {
+                try {
+                    conversation = com.example.agent.web.session.WebSessionManager.getInstance()
+                        .getOrCreateConversation(sessionId, null);
+                } catch (Exception e) {
+                    logger.debug("从 JSONL 加载会话失败：sessionId={}", sessionId);
+                }
+            }
+        }
+
+        int maxTokens = Config.getInstance().getContext().getMaxTokens();
+
+        com.example.agent.web.session.SessionTokenStats stats = null;
+        if (conversation != null) {
+            try {
+                stats = com.example.agent.web.session.WebSessionManager.getInstance().getSessionTokenStats(sessionId);
+            } catch (Exception e) {
+                logger.debug("读取会话 Token 统计失败：sessionId={}", sessionId);
+            }
+        }
+
+        Map<String, Object> response = tokenStatsResponseBuilder.build(conversation, maxTokens, stats);
+
+        sendJson(exchange, response);
+    }
+
+    private void sendJson(HttpExchange exchange, Object data) throws IOException {
+        String response = objectMapper.writeValueAsString(data);
+        byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(200, bytes.length);
+        exchange.getResponseBody().write(bytes);
+        exchange.close();
+    }
+
+    private void sendError(HttpExchange exchange, int code, String message) throws IOException {
+        String response = "{\"error\":\"" + message.replace("\"", "\\\"") + "\"}";
+        byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(code, bytes.length);
+        exchange.getResponseBody().write(bytes);
+        exchange.close();
+    }
+
+    /**
+     * 查询会话的 Agent 执行状态。
+     * GET /api/sessions/{id}/status
+     */
+    private void handleSessionStatus(HttpExchange exchange, String sessionId) throws IOException {
+        WebSessionManager manager = WebSessionManager.getInstance();
+        boolean running = manager.isSessionRunning(sessionId);
+        String json = "{\"sessionId\":\"" + sessionId + "\",\"running\":" + running + "}";
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(200, bytes.length);
+        exchange.getResponseBody().write(bytes);
+        exchange.close();
+    }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "hippobuddy-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:cm": "node scripts/build-codemirror.mjs",
+    "build:ooxml": "node scripts/build-ooxml.mjs",
+    "build:docx-preview": "node scripts/build-docx-preview.mjs",
+    "build:vendor": "node scripts/build-codemirror.mjs && node scripts/build-ooxml.mjs && node scripts/build-docx-preview.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-go": "^6.0.1",
+    "@codemirror/lang-html": "^6.4.9",
+    "@codemirror/lang-java": "^6.0.1",
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/lang-markdown": "^6.3.1",
+    "@codemirror/lang-php": "^6.0.1",
+    "@codemirror/lang-python": "^6.1.6",
+    "@codemirror/lang-rust": "^6.0.1",
+    "@codemirror/lang-sass": "^6.0.2",
+    "@codemirror/lang-sql": "^6.8.0",
+    "@codemirror/lang-xml": "^6.1.0",
+    "@codemirror/lang-yaml": "^6.1.2",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.7.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.37.0",
+    "codemirror": "^6.0.1",
+    "esbuild": "^0.28.1",
+    "jsdom": "^29.1.1",
+    "material-icon-theme": "^5.35.0",
+    "vitest": "^3.1.1"
+  },
+  "overrides": {
+    "@codemirror/state": "$@codemirror/state",
+    "@codemirror/view": "$@codemirror/view",
+    "@codemirror/language": "$@codemirror/language"
+  },
+  "dependencies": {
+    "@fsegurai/codemirror-theme-vscode-light": "^6.2.6",
+    "@silurus/ooxml": "^0.71.0",
+    "docx-preview": "^0.4.0"
+  }
+}

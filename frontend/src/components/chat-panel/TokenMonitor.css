@@ -1,0 +1,199 @@
+/* TokenMonitor 紧凑用量显示 */
+
+.token-monitor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.06);
+  cursor: help;
+  user-select: none;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.token-monitor-loading,
+.token-monitor-error {
+  color: #9ca3af;
+  cursor: default;
+}
+
+.token-monitor-error {
+  color: #dc2626;
+}
+
+.token-monitor-percent {
+  font-weight: 500;
+}
+
+.token-monitor-bar-track {
+  display: inline-block;
+  width: 80px;
+  height: 4px;
+  background: rgba(127, 127, 127, 0.18);
+  border-radius: 2px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.token-monitor-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.token-monitor-counts {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+/* ── 状态栏变体(对齐旧版 statusBarToken:图标 + 百分比) ── */
+.token-monitor-statusbar {
+  /* 对齐旧版 .status-bar-item:不用等宽字体,跟随状态栏其他项字体 */
+  font-family: inherit;
+  background: transparent;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  /* 窄宽度下可收缩省略(悬浮面板走 portal,不受 overflow 影响) */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.token-monitor-statusbar:hover {
+  /* 对齐旧版 .status-bar-item:hover:悬浮背景 */
+  color: var(--text-secondary);
+  background: var(--bg-code);
+}
+
+.token-monitor-statusbar .token-monitor-percent {
+  /* 对齐旧版 .status-bar-value:固定次级文字色,不随使用率变色 */
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ── 状态栏 Token 悬浮面板(对齐旧版 .status-bar-tooltip) ──────────── */
+.status-bar-tooltip {
+  --sbt-emoji-stroke: #000; /* 表情轮廓色:亮色主题黑 */
+  position: fixed;
+  z-index: 10000;
+  min-width: 260px;
+  max-width: 320px;
+  padding: 12px 14px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  pointer-events: none; /* 对齐旧版:纯展示,不拦截事件 */
+  animation: sbt-fade-in 0.15s ease;
+}
+
+[data-theme='dark'] .status-bar-tooltip,
+[data-theme='midnight'] .status-bar-tooltip,
+[data-theme='glass'] .status-bar-tooltip {
+  --sbt-emoji-stroke: #fff; /* 表情轮廓色:暗色主题白 */
+  background: var(--bg-app);
+  border-color: var(--border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes sbt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sbt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+}
+
+.sbt-percent {
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sbt-percent svg {
+  flex-shrink: 0;
+}
+
+.sbt-bar-track {
+  height: 4px;
+  background: var(--bg-code);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.sbt-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.sbt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  color: var(--text-secondary);
+}
+
+.sbt-row span:first-child {
+  color: var(--text-muted);
+}
+
+.sbt-total {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sbt-total span:first-child {
+  color: var(--text-muted);
+}
+
+.sbt-divider {
+  height: 1px;
+  background: var(--border);
+  opacity: 0.4;
+  margin: 5px -14px;
+}
+
+/* ── 深色模式(跟随 app 主题 data-theme,而非系统偏好) ── */
+[data-theme="dark"],
+[data-theme="midnight"] {
+  .token-monitor {
+    background: rgba(127, 127, 127, 0.12);
+  }
+
+  .token-monitor-bar-track {
+    background: rgba(127, 127, 127, 0.28);
+  }
+
+  .token-monitor-counts {
+    color: #9ca3af;
+  }
+}

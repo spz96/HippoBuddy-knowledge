@@ -1,0 +1,630 @@
+/* 工具卡片渲染器统一样式 */
+
+/* ── 卡片容器 ─────────────────────────────────────────── */
+.tool-card {
+  border: 1px solid var(--hb-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--hb-bg, #ffffff);
+  margin: 8px 0;
+  font-size: 13px;
+  overflow: hidden;
+  /* 对齐消息气泡/工具时间线的宽度上限(85%),避免大卡撑满 860px 显得过宽 */
+  max-width: 85%;
+}
+
+/* ── 卡片头部(图标 + 标题 + 状态 + 箭头) ──────────────── */
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(127, 127, 127, 0.04);
+  cursor: default;
+  user-select: none;
+}
+
+.tool-header[role='button'] {
+  cursor: pointer;
+}
+
+.tool-header[role='button']:hover {
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.tool-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.tool-title {
+  font-weight: 600;
+  color: #111827;
+  flex-shrink: 0;
+}
+
+.tool-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tool-status-badge.running {
+  background: var(--warning-bg, rgba(59, 130, 246, 0.12));
+  color: var(--warning-color);
+}
+
+.tool-status-badge.success {
+  background: var(--success-bg, rgba(16, 185, 129, 0.12));
+  color: var(--success-text);
+}
+
+.tool-status-badge.failed {
+  background: var(--error-bg, rgba(220, 38, 38, 0.12));
+  color: var(--error-text);
+}
+
+.tool-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: #9ca3af;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.tool-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+/* ── 卡片正文 ─────────────────────────────────────────── */
+.tool-body {
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--hb-border, #f3f4f6);
+}
+
+.tool-summary {
+  margin-bottom: 6px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* ── 文件路径(可点击) ─────────────────────────────────── */
+.tool-file-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #2563eb;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.tool-file-path.clickable {
+  cursor: pointer;
+}
+
+.tool-file-path.clickable:hover {
+  text-decoration: underline;
+}
+
+/* ── 状态图标动画 ─────────────────────────────────────── */
+.tool-spinner {
+  animation: tool-spinner-rotate 1s linear infinite;
+}
+
+@keyframes tool-spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Bash 工具专属(对齐旧版:白卡片+阴影,命令带主题色左边框) ──── */
+.bash-card {
+  background: var(--bg-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.bash-command {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-code);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary-color);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.bash-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.bash-output {
+  margin-top: 6px;
+  background: #111827;
+  border-radius: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.bash-output pre {
+  margin: 0;
+  padding: 8px 10px;
+  color: #d1d5db;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bash-error,
+.tool-error {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(220, 38, 38, 0.08);
+  border-left: 3px solid #dc2626;
+  border-radius: 3px;
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.bash-progress {
+  margin-top: 6px;
+  background: #111827;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.bash-progress pre {
+  margin: 0;
+  padding: 8px 10px;
+  color: #9ca3af;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Diff 视图 ────────────────────────────────────────── */
+.tool-diff {
+  margin-top: 6px;
+  background: #111827;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.tool-diff .diff-line {
+  display: flex;
+  align-items: flex-start;
+  padding: 0;
+}
+
+.tool-diff .diff-gutter {
+  flex-shrink: 0;
+  width: 22px;
+  padding: 0 6px;
+  text-align: center;
+  color: #6b7280;
+  user-select: none;
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.tool-diff .diff-line-content {
+  flex: 1;
+  padding: 0 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tool-diff .diff-added .diff-line-content {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.tool-diff .diff-removed .diff-line-content {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.tool-diff .diff-context .diff-line-content {
+  color: #9ca3af;
+}
+
+.diff-stats-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.diff-add {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.diff-del {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* ── Todo 列表 ────────────────────────────────────────── */
+.todo-progress-bar {
+  margin: 6px 0 8px;
+}
+
+.todo-progress-track {
+  height: 6px;
+  background: rgba(127, 127, 127, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.todo-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #10b981);
+  transition: width 0.3s ease;
+}
+
+.todo-tree {
+  font-size: 13px;
+}
+
+.todo-tree-item {
+  margin: 2px 0;
+}
+
+.todo-node-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  cursor: default;
+}
+
+.todo-node-row.done .todo-content {
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.todo-node-row.in-progress .todo-icon {
+  color: #3b82f6;
+}
+
+.todo-node-row.pending .todo-icon {
+  color: #9ca3af;
+}
+
+.todo-node-row.done .todo-icon {
+  color: #10b981;
+}
+
+.todo-node-toggle {
+  display: inline-flex;
+  width: 12px;
+  cursor: pointer;
+}
+
+.todo-content {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* ── 确认按钮区 ───────────────────────────────────────── */
+.confirmation-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+  line-height: 1.4;
+}
+
+.confirmation-btn.allow {
+  background: #4b3fe3;
+  color: #fff;
+  border-color: #4b3fe3;
+}
+
+.confirmation-btn.allow:hover {
+  opacity: 0.9;
+}
+
+[data-theme='dark'] .confirmation-btn.allow,
+[data-theme='glass'] .confirmation-btn.allow {
+  background: #6054f1;
+  border-color: #6054f1;
+}
+
+.confirmation-btn.deny {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.confirmation-btn.deny:hover {
+  background: var(--bg-code);
+  color: var(--text-primary);
+}
+
+.confirmation-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* delete_file 确认按钮:酒红色(对齐旧版 .delete-confirm) */
+.confirmation-btn.delete-confirm {
+  background: #f0d6d0;
+  color: #9a4a42;
+  border-color: #e8c4be;
+}
+.confirmation-btn.delete-confirm:hover {
+  background: #e8c4be;
+  border-color: #dcb4ac;
+}
+[data-theme='dark'] .confirmation-btn.delete-confirm,
+[data-theme='glass'] .confirmation-btn.delete-confirm {
+  background: rgb(69, 43, 53);
+  color: rgb(210, 130, 130);
+  border-color: rgb(69, 43, 53);
+}
+[data-theme='dark'] .confirmation-btn.delete-confirm:hover,
+[data-theme='glass'] .confirmation-btn.delete-confirm:hover {
+  background: rgb(90, 55, 65);
+  border-color: rgb(90, 55, 65);
+}
+
+/* ── 工具确认状态徽标(对齐旧版 pending_confirmation) ── */
+.tool-status-badge.pending_confirmation {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+/* ── ask_user 输入(对齐旧版 tool-cards.css 胶囊按钮 + 等待高亮) ── */
+/* 容器对齐旧版 .ask-user-card:灰底 + 紧凑间距 + 圆角隐藏溢出 */
+.ask-user-card {
+  margin: 6px 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-canvas);
+  box-shadow: var(--shadow-sm, none);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* 头部对齐旧版:紧凑 padding/gap + 无常驻底色,仅 hover 高亮 */
+.ask-user-card .tool-header {
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  background: transparent;
+}
+.ask-user-card .tool-header[role='button']:hover {
+  background: var(--bg-light);
+}
+
+/* 标题占满剩余宽度,使状态徽章靠右(对齐旧版 .tool-title flex:1) */
+.ask-user-card .tool-title {
+  flex: 1;
+}
+
+/* 正文对齐旧版 .tool-call-details:无分隔线 + 紧凑内边距 */
+.ask-user-card .tool-body {
+  border-top: none;
+  padding: 0 10px 8px;
+}
+
+.ask-user-question {
+  margin: 6px 0;
+  padding: 6px 2px;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 提交回答后的只读历史态(对齐旧版 ask segment 保留) */
+.ask-user-answer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-light);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.ask-user-answer-label {
+  flex: none;
+  color: var(--text-muted, #6b7280);
+}
+.ask-user-answer-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ask-user-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
+.ask-user-option-btn {
+  padding: 5px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--border-color);
+  background: var(--bg-light);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.ask-user-option-btn:hover {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.ask-user-option-btn:active {
+  transform: scale(0.96);
+}
+
+/* glass 下 --primary-color 为浅灰(白字对比不足),选项 hover 改用品牌靛蓝
+   (与 .confirmation-btn.allow 暗色一致),保证在深色玻璃底上可见 */
+[data-theme="glass"] .ask-user-option-btn:hover {
+  background: #6054f1;
+  border-color: #6054f1;
+  color: #fff;
+}
+
+/* 玻璃主题:卡片底从完全不透 --bg-canvas 改为轻微半透明 + 模糊,
+   让下层玻璃背景微微借光、边缘更有通透感(局部透一点,不过度);
+   但交互区(回答条/选项按钮)用实底 --bg-overlay,避免半透明叠深影响可读可点 */
+[data-theme="glass"] .ask-user-card {
+  background: rgba(16, 18, 25, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+[data-theme="glass"] .ask-user-answer {
+  background: var(--bg-overlay);
+}
+[data-theme="glass"] .ask-user-option-btn {
+  background: var(--bg-overlay);
+}
+
+/* ── 默认卡片参数显示 ─────────────────────────────────── */
+.tool-args,
+.tool-result {
+  margin-top: 6px;
+}
+
+.tool-args pre,
+.tool-result pre {
+  margin: 0;
+  padding: 8px 10px;
+  background: #111827;
+  color: #d1d5db;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.tool-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+.tool-detail-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tool-detail-value {
+  font-size: 12px;
+  color: #111827;
+  word-break: break-word;
+}
+
+/* ── 深色模式 ─────────────────────────────────────────── */
+/* 手动主题(dark / midnight / glass)用 data-theme 覆盖,避免与系统偏好脱节
+   (系统浅色但手动切深色时 @media 不生效,会留下深色文字看不清;
+    glass 同为深底浅字主题,一并接入)。 */
+[data-theme="dark"] .tool-header,
+[data-theme="midnight"] .tool-header,
+[data-theme="glass"] .tool-header {
+  background: rgba(127, 127, 127, 0.08);
+}
+
+[data-theme="dark"] .tool-title,
+[data-theme="midnight"] .tool-title,
+[data-theme="glass"] .tool-title {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .tool-file-path,
+[data-theme="midnight"] .tool-file-path,
+[data-theme="glass"] .tool-file-path {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .tool-summary,
+[data-theme="dark"] .bash-meta,
+[data-theme="midnight"] .tool-summary,
+[data-theme="midnight"] .bash-meta,
+[data-theme="glass"] .tool-summary,
+[data-theme="glass"] .bash-meta {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .tool-body,
+[data-theme="midnight"] .tool-body,
+[data-theme="glass"] .tool-body {
+  border-top-color: rgba(127, 127, 127, 0.15);
+}
+
+[data-theme="dark"] .tool-detail-value,
+[data-theme="midnight"] .tool-detail-value,
+[data-theme="glass"] .tool-detail-value {
+  color: #f3f4f6;
+}
+
+/* system 主题(无 data-theme)跟随系统深浅色 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .tool-header {
+    background: rgba(127, 127, 127, 0.08);
+  }
+
+  :root:not([data-theme]) .tool-title {
+    color: #f3f4f6;
+  }
+
+  :root:not([data-theme]) .tool-file-path {
+    color: #60a5fa;
+  }
+
+  :root:not([data-theme]) .tool-summary,
+  :root:not([data-theme]) .bash-meta {
+    color: #9ca3af;
+  }
+
+  :root:not([data-theme]) .tool-body {
+    border-top-color: rgba(127, 127, 127, 0.15);
+  }
+
+  :root:not([data-theme]) .tool-detail-value {
+    color: #f3f4f6;
+  }
+}

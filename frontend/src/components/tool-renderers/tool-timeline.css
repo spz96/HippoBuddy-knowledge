@@ -1,0 +1,561 @@
+/* ============================================================
+   ToolTimeline - 工具调用时间线样式
+   ------------------------------------------------------------
+   从旧版 static/css/components/tool-cards.css 的
+   「工具调用时间线(紧凑模式)」段落迁移,适配新版主题变量。
+   变量(--border-color / --text-primary 等)经 index.css 兼容别名
+   映射到同一套主题体系,任意主题下取色一致。
+   ============================================================ */
+
+/* ── 时间线容器(左侧竖线) ─────────────────────────────── */
+.tool-timeline {
+  position: relative;
+  margin: 6px 0 6px 16px;
+  padding: 0 0 0 8px;
+  border-left: 2px solid var(--border-color);
+  /* 对齐旧版:旧版工具卡嵌入 .message.assistant(85% 限制),
+     本组件独立于气泡,需手动补齐相同的宽度上限。 */
+  max-width: 85%;
+}
+
+.tool-timeline-item {
+  position: relative;
+  margin-bottom: 1px;
+}
+
+.tool-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  font-size: var(--font-size-sm);
+  user-select: none;
+  line-height: 1.4;
+}
+
+.tool-timeline-row:hover {
+  background: var(--bg-canvas);
+}
+
+.tool-timeline-row:active {
+  background: var(--bg-code);
+}
+
+/* 无详情时(如 read_file),行不可点击,隐藏 hover 效果 */
+.tool-timeline-item.no-detail .tool-timeline-row {
+  cursor: default;
+}
+
+.tool-timeline-item.no-detail .tool-timeline-row:hover {
+  background: transparent;
+}
+
+/* 玻璃主题:悬浮改用半透明白 + blur 毛玻璃,透出背景,
+   与玻璃整体质感统一(默认/深色主题保持实底 --bg-canvas) */
+[data-theme="glass"] .tool-timeline-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+[data-theme="glass"] .tool-timeline-item.no-detail .tool-timeline-row:hover {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.tool-timeline-dot {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.tool-timeline-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  min-width: 52px;
+  font-family: var(--font-mono);
+}
+
+.tool-timeline-summary {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  min-width: 0;
+  user-select: text;
+}
+
+/* 文件摘要可点击跳转 */
+.tool-timeline-summary[data-clickable] {
+  cursor: pointer;
+}
+
+.tool-timeline-summary[data-clickable]:hover {
+  color: var(--text-primary);
+}
+
+.tool-timeline-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* ── 复制命令按钮(bash,悬浮行时显示) ─────────────────── */
+.tool-timeline-copy-btn {
+  flex-shrink: 0;
+  display: none;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.tool-timeline-row:hover .tool-timeline-copy-btn {
+  display: inline-flex;
+}
+
+.tool-timeline-copy-btn:hover {
+  color: var(--text-primary);
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.tool-timeline-copy-ok {
+  color: var(--success-text);
+  font-weight: 700;
+}
+
+/* 查看变更按钮(edit_file/write_file 成功态,悬浮行时显示;对齐旧版 tool-timeline-view-btn) */
+.tool-timeline-view-btn {
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.tool-timeline-row:hover .tool-timeline-view-btn {
+  display: inline-flex;
+}
+
+.tool-timeline-view-btn:hover {
+  color: var(--primary-color, var(--text-primary));
+  background: rgba(128, 128, 128, 0.1);
+}
+
+/* ── 展开详情 ─────────────────────────────────────────── */
+.tool-timeline-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+  opacity: 0;
+  padding: 0 0 0 24px;
+}
+
+.tool-timeline-item.expanded .tool-timeline-detail {
+  opacity: 1;
+  /* 展开时必须放开 max-height(旧版由 JS 动态撑开;新版纯 CSS 折叠,
+     这里给一个足够容纳常规详情的上限,超长内容用 overflow 内滚兜底),
+     否则 max-height:0 + overflow:hidden 会把详情(含行内确认卡片)裁成空白 */
+  max-height: 2000px;
+  overflow-y: auto;
+  padding: 2px 0 4px 24px;
+}
+
+/* ── 详情:状态文本 ────────────────────────────────────── */
+.timeline-detail-status {
+  padding: 6px 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.timeline-detail-status.cancelled {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.timeline-detail-status.denied {
+  color: var(--text-muted);
+}
+
+/* ── 详情:搜索类工具元信息(对齐旧版 grep/glob/list_directory 简洁化) ── */
+.timeline-detail-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.timeline-detail-meta > span + span {
+  margin-left: 8px;
+}
+
+.timeline-detail-grep-filter {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.timeline-detail-grep-count,
+.timeline-detail-glob-count {
+  color: var(--text-secondary);
+}
+
+.timeline-detail-grep-empty,
+.timeline-detail-glob-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── 详情:web 工具元信息(对齐旧版 web_search/web_fetch 简洁化) ── */
+.timeline-detail-web-count {
+  color: var(--text-secondary);
+}
+
+.timeline-detail-web-truncated {
+  font-size: var(--font-size-xs);
+  color: var(--warning-color, #d97706);
+  font-style: italic;
+}
+
+.timeline-detail-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── 详情:流式进度(执行中) ────────────────────────────── */
+.timeline-detail-progress {
+  margin: 4px 0;
+  position: relative;
+}
+
+.timeline-detail-progress pre {
+  background: var(--bg-code);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent);
+}
+
+.timeline-detail-progress pre code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.timeline-detail-progress::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(transparent, var(--bg-code));
+  pointer-events: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+/* ── 详情:错误 ────────────────────────────────────────── */
+.timeline-detail-error {
+  padding: 8px 12px;
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  margin: 4px 0;
+}
+
+/* ── 行内确认区(bash/delete_file 待确认,对齐旧版内嵌确认卡片) ─── */
+.timeline-detail-confirmation {
+  /* 整卡用中性细边框(保留卡片与聊天背景的区分,不随风险级别变色黄/红),
+     风险等级仅由右侧风险徽章传达 */
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  /* 暗色下为 #262626(38,38,38),浅色下为 #edeff2,比聊天背景更明显的卡片底 */
+  background: var(--bg-canvas);
+  box-shadow: var(--shadow-sm, none);
+  /* 作为 flex 子项时默认 stretch 会撑到父容器满宽,这里约束为不超出父容器 */
+  max-width: 100%;
+}
+
+.timeline-detail-confirmation.high {
+  --risk-color: var(--error-text);
+  --risk-bg: rgba(220, 60, 60, 0.08);
+  --risk-border: rgba(220, 60, 60, 0.25);
+  /* 高风险(delete_file)保留红色边框,与 bash 中性细边框区分 */
+  border-color: var(--risk-border);
+}
+
+.timeline-detail-confirmation.medium {
+  --risk-color: var(--warning-color, #e6a817);
+  --risk-bg: rgba(230, 168, 23, 0.08);
+  --risk-border: rgba(230, 168, 23, 0.25);
+}
+
+.timeline-detail-confirmation.low {
+  --risk-color: var(--success-text);
+  --risk-bg: rgba(60, 180, 75, 0.08);
+  --risk-border: rgba(60, 180, 75, 0.25);
+}
+
+.confirmation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+}
+
+.confirmation-header-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--risk-color, var(--warning-color));
+}
+
+.confirmation-header-title {
+  /* 不占满剩余空间,让右侧风险徽章紧贴标题(而非推到最右) */
+  flex: none;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--risk-bg);
+  color: var(--risk-color);
+  border: 1px solid var(--risk-border);
+  line-height: 1.5;
+}
+
+.confirmation-body {
+  padding: 12px;
+  /* 旧版固定的 1200px 上限会让内容撑得比消息区(860px)还宽,新版改为跟随父容器 */
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirmation-command {
+  margin: 0;
+}
+
+.confirmation-command pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.confirmation-command pre code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.confirmation-reason {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.confirmation-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+}
+
+.confirmation-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ── delete_file 确认 - 文件列表(单文件/多文件统一) ──────── */
+.delete-file-multi {
+  padding: 0;
+}
+
+.delete-file-multi-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.delete-file-multi-header .delete-file-icon {
+  flex-shrink: 0;
+  color: var(--error-color);
+}
+
+.delete-file-multi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.delete-file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+.delete-file-item-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* ── 详情:输出 ────────────────────────────────────────── */
+.timeline-detail-output {
+  margin: 4px 0;
+}
+
+.timeline-detail-output pre {
+  background: var(--bg-code);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  border: 1px solid var(--border-color);
+}
+
+.timeline-detail-output pre code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── 详情:diff(edit_file / write_file) ────────────────── */
+.timeline-detail-diff {
+  margin: 4px 0;
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+/* ── 状态颜色 ─────────────────────────────────────────── */
+.tool-timeline-status.success svg {
+  stroke: var(--success-text);
+}
+
+.tool-timeline-status.error svg,
+.tool-timeline-status.failed svg {
+  stroke: var(--error-text);
+}
+
+.tool-timeline-status.cancelled svg {
+  stroke: var(--text-muted);
+}
+
+.tool-timeline-status.running svg,
+.tool-timeline-status.running .tool-spinner {
+  stroke: var(--warning-color, #e6a817);
+}
+
+.tool-timeline-status.pending_confirmation svg {
+  stroke: var(--warning-color, #e6a817);
+}
+
+/* ── diff 统计(+N / -M,edit/write 成功时) ─────────────── */
+.timeline-diff-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  /* 用等宽字体与左侧工具名对齐,数字更整齐 */
+  font-family: var(--font-mono);
+}
+
+.timeline-diff-stats .diff-add {
+  color: var(--success-text);
+}
+
+.timeline-diff-stats .diff-del {
+  color: var(--error-text);
+}
+
+/* ── 深色主题微调 ─────────────────────────────────────── */
+[data-theme='dark'] .tool-timeline {
+  border-left-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='dark'] .tool-timeline-row:hover {
+  background: var(--bg-canvas);
+}

@@ -1,0 +1,340 @@
+/* FilePreview - 文件预览
+   颜色对齐旧版 static/css/components/workspace.css / cockpit.css:
+   通过基础变量 + [data-theme] 选择器在 light / dark / midnight 三套主题下自动跟随,
+   避免用 @media(prefers-color-scheme) 与项目手动主题(data-theme)脱节。
+*/
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.file-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 25px;
+  padding: 0 12px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* 玻璃主题:头部与标签栏(.file-tabs)同款 70% 稀释,二者叠在同一父层上透明度一致。
+   关键:让 .file-preview 在玻璃下透明,消除其 0.4 冗余层 —— 否则头部会比标签栏
+   多叠一层 0.4 而更深,任改头部自身都无法抵消(同理处理 .file-preview-editor)。 */
+[data-theme="glass"] .file-preview {
+  background: transparent;
+}
+
+[data-theme="glass"] .file-preview-header {
+  background: color-mix(in srgb, var(--glass-panel) 70%, transparent);
+}
+
+[data-theme="glass"] .file-preview-editor {
+  background: transparent;
+}
+
+/* 面包屑路径(对齐旧版 .file-preview-path:dir › dir › file) */
+.file-preview-path {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  padding-left: 4px;
+}
+
+.file-preview-path .sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+  margin: 0 4px;
+  font-family: sans-serif;
+}
+
+/* 可点击目录段:点击在文件树中定位该目录(对齐旧版 .path-segment → revealDirectory) */
+.file-preview-path .path-segment {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 2px;
+  margin: 0 -1px;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.file-preview-path .path-segment:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.file-preview-lines {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  margin-left: 2px;
+}
+
+/* 未保存改动指示(对齐旧版 tab 脏圆点) */
+.file-preview-dirty {
+  color: var(--accent, #e5b567);
+  font-size: 10px;
+  line-height: 1;
+  margin-left: 5px;
+}
+
+/* 保存失败提示(仅桌面端可写时显示) */
+.file-preview-save-error {
+  color: var(--danger, #e06c75);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  margin-right: 2px;
+}
+
+.file-preview-actions .preview-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.file-preview-actions .preview-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* 头部动作按钮组(对齐旧版 .file-preview-toolbar-actions .preview-btn:24×24 透明,hover 背景) */
+.file-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.file-preview-actions .preview-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.file-preview-actions .preview-btn:hover {
+  background: var(--bg-code);
+  color: var(--text-primary);
+}
+
+/* 激活态(自动换行等开关按钮,对齐旧版 .preview-btn.active) */
+.file-preview-actions .preview-btn.active {
+  background: var(--bg-code);
+  color: var(--accent, #4a9eff);
+}
+
+/* 收起预览按钮(对齐旧版 .panel-toggle-btn 独立样式,末尾固定) */
+.file-preview-actions .panel-toggle-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.file-preview-actions .panel-toggle-btn:hover {
+  background: var(--bg-code);
+  color: var(--text-secondary);
+}
+
+.file-preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-preview-pdf {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  border: none;
+  background: #525659;
+}
+
+.file-preview-editor-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* CM6 编辑器容器(FilePreviewEditor 挂载点) */
+.file-preview-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-app);
+  font-size: 12.5px;
+}
+
+/* 覆盖 CM6 内部样式:与 .file-preview-content 的观感对齐 */
+.file-preview-editor .cm-editor {
+  height: 100%;
+  /* 编辑器底色锁定为 --bg-chat(浅色 #fff / dark #171717 / midnight #181d27),
+     用 0,2,0 优先级压过 oneDark/githubLight 各自 .cm-theme-* 的底色(0,1,0),
+     保证无论 CM 样式注入顺序如何都随 data-theme 语义色 */
+  background-color: var(--bg-chat);
+}
+
+/* 行号区同底色,避免 oneDark 的 #21252b 竖条与正文产生色差(对齐旧版 cm-gutters);
+   同时去掉 border-right,恢复旧版"行号区右侧无分割线"的观感(否则浅色 githubLight 主题会画出 1px 灰色竖线) */
+.file-preview-editor .cm-editor .cm-gutters {
+  background-color: var(--bg-chat);
+  border-right: none;
+}
+
+/* 玻璃主题:正文区减叠深,与标签栏/面板保持一致(取 --glass-panel 的 70%) */
+[data-theme="glass"] .file-preview-editor .cm-editor {
+  background-color: color-mix(in srgb, var(--glass-panel) 70%, transparent);
+}
+
+/* 玻璃主题下行号条:
+   平时保持透明,透出 .cm-editor 的 0.28 单层背景 —— 与正文(.cm-content 透出同层)、
+   头部、标签栏透明度完全一致;若在此再叠 0.28 会令行号条比邻区更深一层。
+   仅当横向滚动(scrollLeft>0)时切为不透明实底,彻底遮挡滑进行号条下方的代码。
+   不采用 backdrop-filter:本应用玻璃为"全屏 body::before frost 层",sticky 行号条的
+   backdrop 采样端受限,无法糊掉下层滑入代码(见 FilePreviewEditor.tsx 的 is-h-scrolled 切换)。 */
+[data-theme="glass"] .file-preview-editor .cm-editor .cm-gutters {
+  background-color: transparent;
+}
+[data-theme="glass"] .file-preview-editor.is-h-scrolled .cm-editor .cm-gutters {
+  background-color: rgb(22, 24, 32);
+}
+
+/* ── 对齐全局滚动条观感 ──
+   githubLight 主题自带 track: #e1e4e8,在纯白 --bg-chat 背景上会有色差;
+   这里把 editor 滚动条压回应用语义色(与 index.css 全局一致),深色 oneDark 不定义 scrollbar,无需覆盖 */
+.file-preview-editor .cm-editor .cm-scroller::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.file-preview-editor .cm-editor .cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+.file-preview-editor .cm-editor .cm-scroller::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: none;
+  border-radius: 3px;
+}
+.file-preview-editor .cm-editor .cm-scroller::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── 对齐旧版 workspace.css 的 CM 主题色覆盖 ──
+   以下把 oneDark/githubLight 各主题的硬编码色(选区/当前行/行号高亮)
+   拉回应用语义色,保证随 data-theme 一致(与背景色同理,用 !important 压过主题选择器) */
+
+/* 隐藏 CM 自绘的全宽选中背景(中间行会铺满整行宽度) */
+.file-preview-editor .cm-selectionBackground {
+  background: transparent !important;
+}
+
+/* 使用浏览器原生 ::selection 渲染选中,精确覆盖文字字符 */
+.file-preview-editor .cm-content ::selection {
+  background: var(--selection-bg) !important;
+}
+
+/* 深色模式下当前行背景对齐旧版 */
+[data-theme="dark"] .file-preview-editor .cm-activeLine,
+[data-theme="midnight"] .file-preview-editor .cm-activeLine {
+  background: rgb(44, 49, 58) !important;
+}
+
+/* 玻璃模式当前行跟随半透明弱盖,保持毛玻璃通透不显实色块 */
+[data-theme="glass"] .file-preview-editor .cm-activeLine {
+  background: var(--bg-hover) !important;
+}
+
+/* 选中文字时隐藏当前行高亮(必须放在上面 activeLine 规则之后,确保覆盖；对齐旧版) */
+.file-preview-editor.has-selection .cm-activeLine {
+  background: transparent !important;
+}
+
+/* 深色模式下当前行行号文字高亮 */
+[data-theme="dark"] .file-preview-editor .cm-activeLineGutter,
+[data-theme="midnight"] .file-preview-editor .cm-activeLineGutter {
+  color: var(--text-primary) !important;
+}
+
+.file-preview-editor .cm-scroller {
+  overflow: auto;
+}
+
+.file-preview-editor .cm-content {
+  padding: 12px 0;
+}
+
+.file-preview-editor .cm-line {
+  padding: 0 16px;
+}
+
+.file-preview-loading,
+.file-preview-error,
+.file-preview-unsupported {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.file-preview-error button,
+.file-preview-unsupported .file-preview-download {
+  padding: 6px 12px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.file-preview-error button:hover,
+.file-preview-unsupported .file-preview-download:hover {
+  background: var(--bg-code);
+  color: var(--text-primary);
+}
+
+/* 深色/午夜主题:预览区背景改用聊天背景(对齐旧版 workspace.css .file-preview-area) */
+[data-theme="dark"] .file-preview,
+[data-theme="midnight"] .file-preview {
+  background: var(--bg-chat);
+}
+
+[data-theme="dark"] .file-preview-editor,
+[data-theme="midnight"] .file-preview-editor {
+  background: var(--bg-chat);
+}

@@ -1,0 +1,39 @@
+prompts:
+  # ===========================================================================
+  # 核心层（始终注入）
+  # ===========================================================================
+  - type: CORE_ROLE
+    file: core/role.md
+    version: "1.0.0"
+    enabled: true
+    priority: 100
+    description: "角色定义 + 自主决策原则 + @引用 + 工具调用策略"
+
+  # ===========================================================================
+  # 模式层（根据当前 TaskMode 按需加载）
+  # ===========================================================================
+  - type: MODE_CODING
+    file: mode/coding.md
+    version: "1.0.0"
+    enabled: true
+    priority: 80
+    description: "构建模式 - 工程师角色，全权限执行"
+
+  - type: MODE_CHAT
+    file: mode/chat.md
+    version: "1.0.0"
+    enabled: true
+    priority: 80
+    description: "顾问模式 - 只读探索，提供建议不执行"
+
+  - type: MODE_OFFICE
+    file: mode/office.md
+    version: "1.0.0"
+    enabled: true
+    priority: 80
+    description: "办公模式 - 办公效率助手，擅长文档处理"
+
+config:
+  defaultBase: CODING
+  maxExpertPrompts: 2
+  autoInjectEnabled: false

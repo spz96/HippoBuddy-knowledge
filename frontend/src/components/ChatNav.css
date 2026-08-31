@@ -1,0 +1,203 @@
+/* ChatNav - 会话内用户消息导航条
+   完整对齐旧版 static/css/components/chat-panel.css 的 .chat-nav-* 系列:
+   - 收起态:16px 窄条,item 文字隐藏(font-size:0),只显示 ::before 标记条/圆点
+   - hover 态:展开 240px 宽面板,显示文字 + 圆点 marker,毛玻璃背景 + 阴影
+   定位基准:.chat-panel(已在 ChatPanel.css 设 position:relative);
+   top 对齐旧版 120px(避开 header 36px + 顶部消息区) */
+
+.chat-nav-strip {
+  position: absolute;
+  right: 8px;
+  top: 120px;
+  z-index: 20;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 0;
+  box-shadow: none;
+  transition: box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, border-radius 0.2s ease, backdrop-filter 0.2s ease;
+  cursor: default;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid transparent;
+}
+
+.chat-nav-strip:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .chat-nav-strip,
+[data-theme="midnight"] .chat-nav-strip,
+[data-theme="glass"] .chat-nav-strip {
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .chat-nav-strip:hover,
+[data-theme="midnight"] .chat-nav-strip:hover,
+[data-theme="glass"] .chat-nav-strip:hover {
+  background: rgba(30, 30, 35, 0.95);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* 空态(无 user 消息)隐藏,对齐旧版
+   .chat-panel:not(.has-messages) .chat-nav-strip { display:none } */
+.chat-nav-strip[data-empty="true"] {
+  display: none;
+}
+
+.chat-nav-panel {
+  display: flex;
+  flex-direction: column;
+  width: 16px;
+  transition: width 0.2s ease;
+}
+
+.chat-nav-strip:hover .chat-nav-panel {
+  width: 240px;
+}
+
+.chat-nav-strip:not(:hover) .chat-nav-panel {
+  pointer-events: none;
+}
+
+.chat-nav-strip:not(:hover) .chat-nav-items {
+  padding: 8px 0;
+}
+
+.chat-nav-items {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  max-height: 296px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+}
+
+.chat-nav-items::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-nav-strip:not(:hover) .chat-nav-items::-webkit-scrollbar {
+  width: 0;
+}
+
+.chat-nav-items::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-nav-items::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.chat-nav-items::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.chat-nav-item {
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.chat-nav-item:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .chat-nav-item:hover,
+[data-theme="midnight"] .chat-nav-item:hover,
+[data-theme="glass"] .chat-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 收起态(hover 前)每条 item 前的标记:短横条 → hover 后变圆点 */
+.chat-nav-item::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text-muted);
+  margin-right: 8px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 15%, black 30%, black 70%, transparent 85%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, transparent 15%, black 30%, black 70%, transparent 85%, transparent 100%);
+}
+
+/* 收起态:隐藏文字,item 变成 16px 宽的竖向标记列 */
+.chat-nav-strip:not(:hover) .chat-nav-item {
+  padding: 6px 0;
+  text-align: center;
+  font-size: 0;
+  line-height: 0;
+  pointer-events: none;
+  min-height: 30px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+}
+
+.chat-nav-strip:not(:hover) .chat-nav-item::before {
+  display: block;
+  margin: 0;
+  width: 12px;
+  height: 2px;
+}
+
+.chat-nav-strip:hover .chat-nav-item::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 8px;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* 当前可见项高亮 */
+.chat-nav-item.active::before {
+  opacity: 0.9;
+  background: var(--text-primary);
+}
+
+.chat-nav-strip:hover .chat-nav-item.active::before {
+  width: 7px;
+  height: 7px;
+  opacity: 1;
+}
+
+.chat-nav-strip:not(:hover) .chat-nav-item.active::before {
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0.9;
+}
